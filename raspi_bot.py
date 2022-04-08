@@ -1067,10 +1067,10 @@ class port:
                 if 'right_turn' in self.data:
                     print("DATA IS:",self.data)
                     self.data = ""
-                    #p0 = Process(target=self.movement.rotate, args=(0, 0.01,))
-                    #p0.start()
-#                     sleep(1)
-#                     p0.terminate()
+                    p0 = Process(target=self.movement.rotate, args=(0, 0.01,))
+                    p0.start()
+#                   sleep(1)
+#                   p0.terminate()
                      
                 if 'left_turn' in self.data:
                     print("DATA IS:",self.data)
