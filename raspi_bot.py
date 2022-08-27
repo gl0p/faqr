@@ -1,8 +1,10 @@
 import serial   ### /dev/ttyAMA0
 import board
+import queue
+import logging
 from os import system
 
-from time import sleep
+from time import sleep, time
 try:
     system("sudo killall pigpiod")
     
@@ -12,12 +14,10 @@ system("sudo pigpiod")
 from gpiozero import AngularServo, Device, LED, DistanceSensor
 from gpiozero.pins.pigpio import PiGPIOFactory
 from threading import Thread, Lock
-from multiprocessing import Process, Pipe
+import threading
+from multiprocessing import Process
 
 
-
-
-end_in, end_out = Pipe()
 
 ###     0, 1,  2,  3,  4,  5,  6, 7, 8,  9, 10, 11, 12, 13, 14
 pins = [4, 17, 27, 22, 10, 9, 11, 5, 6, 13, 19, 26, 20, 21]
@@ -48,9 +48,9 @@ servo[10] = AngularServo(pins[10], min_angle=-90, max_angle=90, min_pulse_width=
 servo[11] = AngularServo(pins[11], min_angle=-90, max_angle=90, min_pulse_width=0.5 / 1000, max_pulse_width=2.5 / 1000,
                          frame_width=5 / 1000, pin_factory=PiGPIOFactory(), initial_angle=-60)
 servo[12] = AngularServo(20, min_angle=-90, max_angle=90, min_pulse_width=0.5 / 1000, max_pulse_width=2.5 / 1000,
-                         frame_width=5 / 1000, pin_factory=PiGPIOFactory(), initial_angle=0)
-servo[13] = AngularServo(21, min_angle=-90, max_angle=90, min_pulse_width=0.5 / 1000, max_pulse_width=2.5 / 1000,
-                         frame_width=5 / 1000, pin_factory=PiGPIOFactory(), initial_angle=0)
+                         frame_width=5 / 1000, pin_factory=PiGPIOFactory(), initial_angle=10)
+# servo[13] = AngularServo(21, min_angle=-90, max_angle=90, min_pulse_width=0.5 / 1000, max_pulse_width=2.5 / 1000,
+#                          frame_width=5 / 1000, pin_factory=PiGPIOFactory(), initial_angle=10)
 
 
 def ang(ang):
@@ -59,51 +59,37 @@ def ang(ang):
 
 
 def zero_pos():
-    t = 0.01
-    direction = [[0,3,6,9],[1,4,7,10],[2,5,8,11]]
-    _0 = direction[0][0]
-    _1 = direction[1][0]
-    _2 = direction[2][0]
-    _3 = direction[0][1]
-    _4 = direction[1][1]
-    _5 = direction[2][1]
-    _6 = direction[0][2]
-    _7 = direction[1][2]
-    _8 = direction[2][2]
-    _9 = direction[0][3]
-    _10 = direction[1][3]
-    _11 = direction[2][3]
-    
-    if ang(_0) <= 0:
-        if ang(_1) <= 0:
-            if ang(_2) <= 0:
-                a = ang(_2)
-                for i in range(0, a, -1):
-                    servo[2].angle = a-i
-                    sleep(t)
-            b = ang(_1)
-            for i in range(0, b, -1):
-                servo[1].angle = b-i
-                sleep(t)
-        c = ang(_0)
-        for i in range(0, c, -1):
-            servo[0].angle = c-i
-            sleep(t)
-    if ang(_3) != -10:
-        x = ang(_3)
-        for i in range(0,x, -1):
-            servo[_3].angle = x-i
-            sleep(t)
-    if ang(_6) != 0:
-        x = ang(_6)
-        for i in range(0,x, -1):
-            servo[_6].angle = x-i
-            sleep(t)
-    if ang(_9) != 0:
-        x = ang(_9)
-        for i in range(0,x, -1):
-            servo[_9].angle = x-i
-            sleep(t)
+#     t = 0.01
+#     if ang(_0) <= 0:
+#         if ang(_1) <= 0:
+#             if ang(_2) <= 0:
+#                 a = ang(_2)
+#                 for i in range(0, a, -1):
+#                     servo[2].angle = a-i
+#                     sleep(t)
+#             b = ang(_1)
+#             for i in range(0, b, -1):
+#                 servo[1].angle = b-i
+#                 sleep(t)
+#         c = ang(_0)
+#         for i in range(0, c, -1):
+#             servo[0].angle = c-i
+#             sleep(t)
+#     if ang(_3) != -10:
+#         x = ang(_3)
+#         for i in range(0,x, -1):
+#             servo[_3].angle = x-i
+#             sleep(t)
+#     if ang(_6) != 0:
+#         x = ang(_6)
+#         for i in range(0,x, -1):
+#             servo[_6].angle = x-i
+#             sleep(t)
+#     if ang(_9) != 0:
+#         x = ang(_9)
+#         for i in range(0,x, -1):
+#             servo[_9].angle = x-i
+#             sleep(t)
     
     ### HIPS ###
     servo[0].angle = 0
@@ -125,25 +111,24 @@ def zero_pos():
     servo[5].angle = -60
     servo[11].angle = -60
     
-    #servo[12].angle = 0
-    #servo[13].angle = 0
     print("ZERO_POS COMPLETE")
+    sleep(0.25)
     
 class move:
     def __init__(self):
         pass
         
     def walk(self, walk, speed):
-        #global end
-        end = end_in.recv()
+        global run_flag_move
+        run_flag_move = True
         flag = False
         t = speed
-        
+        end = False
         if walk == 1:
             direction = [[0,3,6,9],[1,4,7,10],[2,5,8,11]]
         if walk == 0:
             direction = [[6,9,0,3],[7,10,1,4],[8,11,2,5]]
-            
+        zero_pos() 
         _0 = direction[0][0]
         _1 = direction[1][0]
         _2 = direction[2][0]
@@ -171,6 +156,7 @@ class move:
                 print("ENDED") 
                 flag = False
                 end = False
+                run_flag_move = False
                 zero_pos()
                 break
                     
@@ -411,8 +397,9 @@ class move:
                     sleep(t)
            
     def rotate(self, rotation, speed):
-        #global end
-        
+        global run_flag_rotate
+        run_flag_rotate = True
+        zero_pos()
         end = False
         print(end)
         flag = False
@@ -422,6 +409,7 @@ class move:
                 print("ENDED") 
                 flag = False
                 end = False
+                run_flag_rotate = False
                 zero_pos()
                 break
             if rotation == 1:
@@ -972,9 +960,107 @@ class move:
                     servo[4].angle = b+i
                     servo[5].angle = c+i/2
                     sleep(t)
+    def dance(self):
+        t = 0.05
+        zero_pos()
+        const = 3
+        sleep(1)
+        a = ang(4)
+        b = ang(7)
+        c = ang(5)
+        d = ang(8)
+        e = ang(1)
+        f = ang(2)
+        g = ang(10)
+        h = ang(11)
+        for i in  range(0, 15):
+            servo[4].angle = a+i*const
+            servo[5].angle = c+i
+            servo[7].angle = b-i*const
+            servo[8].angle = d-i
+            servo[1].angle = e+i*const
+            servo[2].angle = f+i
+            servo[10].angle = g-i*const
+            servo[11].angle = h-i
+            sleep(t)
+        a = ang(4)
+        b = ang(7)
+        c = ang(5)
+        d = ang(8)
+        e = ang(1)
+        f = ang(2)
+        g = ang(10)
+        h = ang(11)
+        for i in  range(0, 15):
+            servo[4].angle = a-i*const
+            servo[5].angle = c-i
+            servo[7].angle = b+i*const
+            servo[8].angle = d+i
+            servo[1].angle = e-i*const
+            servo[2].angle = f-i
+            servo[10].angle = g+i*const
+            servo[11].angle = h+i
+            sleep(t)
+        a = ang(4)
+        b = ang(7)
+        c = ang(5)
+        d = ang(8)
+        e = ang(1)
+        f = ang(2)
+        g = ang(10)
+        h = ang(11)
+        for i in  range(0, 15):
+            servo[4].angle = a-i*const
+            servo[5].angle = c-i
+            servo[7].angle = b+i*const
+            servo[8].angle = d+i
+            servo[1].angle = e-i*const
+            servo[2].angle = f-i
+            servo[10].angle = g+i*const
+            servo[11].angle = h+i
+            sleep(t)
+        a = ang(4)
+        b = ang(7)
+        c = ang(5)
+        d = ang(8)
+        e = ang(1)
+        f = ang(2)
+        g = ang(10)
+        h = ang(11)
+        for i in  range(0, 15):
+            servo[4].angle = a+i*const
+            servo[5].angle = c+i
+            servo[7].angle = b-i*const
+            servo[8].angle = d-i
+            servo[1].angle = e+i*const
+            servo[2].angle = f+i
+            servo[10].angle = g-i*const
+            servo[11].angle = h-i
+            sleep(t)
    
-
-            
+    def sit(self):
+        zero_pos()
+        t = 0.01
+        a = ang(1)
+        b = ang(2)
+        c = ang(4)
+        d = ang(5)
+        e = ang(7)
+        f = ang(8)
+        g = ang(10)
+        h = ang(11)
+        for i in range(0, 5):
+            servo[2].angle = b+i
+            servo[5].angle = d-i
+            servo[8].angle = f+i
+            servo[11].angle = h-i
+            sleep(t)
+        for i in range(0, 50):
+            servo[1].angle = a-i
+            servo[4].angle = c+i
+            servo[7].angle = e-i
+            servo[10].angle = g+i
+            sleep(t)
             
 class port:
     def __init__(self):
@@ -986,54 +1072,59 @@ class port:
         self.lock = Lock()
         self.v_flag = False
         self.lr = 0
+        self.pRotate_right = Process(target=self.movement.rotate, args=(0, 0.01,))
+        self.pRotate_left = Process(target=self.movement.rotate, args=(1, 0.01,))
+        self.pBackwards = Process(target=self.movement.walk, args=(0, 0.01,))
+        self.pForwards = Process(target=self.movement.walk, args=(1, 0.01,))
+        self.last_location = None
+        self.cam_angle = None
         
-    def send_data(self, kol):
-        self.lock.acquire()
-        ser = serial.Serial(
-            port='/dev/ttyGS0',
-            baudrate=115200,
-            parity=serial.PARITY_NONE,
-            bytesize = serial.EIGHTBITS,
-            timeout=0)
-        if kol == "distance":
-            ser.write('{} '.format('distance').encode("utf-8"))
-            ser.write('{} \n'.format(distance).encode("utf-8"))
-            print(distance)
-        else:
-            ser.write('{} \n'.format(kol).encode("utf-8"))
-            ser.flushOutput()
-        #print("Sent Data")
-        self.lock.release()
+        self.ser = serial.Serial(
+                port='/dev/ttyGS0',
+                baudrate=115200,
+                parity=serial.PARITY_NONE,
+                bytesize = serial.EIGHTBITS,
+                timeout=0)
+        
+        
+    def send_data(self, data):
+        print('DATA TO BE SENT IS:', data)
+        self.ser.write('{} \n'.format(data).encode("utf-8"))
             
             
     def rec_data(self):
-        global p0
-        
-        ser = serial.Serial(
-            port='/dev/ttyGS0',
-            baudrate=115200,
-            parity=serial.PARITY_NONE,
-            bytesize = serial.EIGHTBITS,
-            timeout=1)
-        
-        #self.data = ""
-        
         while True:
-            
-            while ser.inWaiting() > 0:
-                self.lock.acquire()
-                self.data = ser.readline()
+            while self.ser.inWaiting() > 0:
+                self.data = self.ser.readline()
                 self.data = str(self.data.decode())
-                #print(self.data)
+                print('Data RECIEVED is:',self.data)
+                if 'last_location' in self.data:
+                    self.last_location = self.data
+                    self.last_location = self.last_location.replace('last_location',"")
+                    if len(self.last_location) > 0:
+                        print('LAST LOCATION MARK:', self.last_location)
+                        self.last_location = float(self.last_location)
+                    self.data = ''
                 if 'stop' in self.data:
                     self.stop = True
                     print("stop recieved")
                     self.data = ""
+                if 'reset' in self.data:
+                    servo[12].angle = 10
+                    zero_pos()
                 if 'end' in self.data:
-                    p0.terminate()
+                    if self.pRotate_right.is_alive():
+                        self.pRotate_right.terminate()
+                    if self.pRotate_left.is_alive():
+                        self.pRotate_left.terminate()
+                    if self.pBackwards.is_alive():
+                        self.pBackwards.terminate()
+                    if self.pForwards.is_alive():
+                        self.pForwards.terminate()
                     print("end recieved")
                     self.data = ""
-                    
+                    sleep(0.25)
+                    print('FORWARD:',self.pForwards.is_alive(), 'BACKWARD:',self.pBackwards.is_alive())
                 if 'center_right' in self.data:
                     self.data = ""
                     self.v_flag = True
@@ -1042,55 +1133,54 @@ class port:
                     self.data = ""
                     self.v_flag = True
                     self.lr = 1
-                self.lock.release()
+                
        
                
                 
                 
     def main(self):
         center = 320
-        global p0
         while True:
-            
-            if len(self.data) > 0:
+            if self.data is not None:
                 if 'distance' in self.data:
                     self.data = ""
                     print("DATA IS:", self.data)
                     port.sonar()
                     
                 if 'cam_ang' in self.data:
-                    port.send_data(ang(12))
+                    self.send_data(str((ang(12))))
                     print("sent cam angle")
                     self.data = ""
                 
-            
+                if 'sit' in self.data:
+                    self.movement.sit()
+                    self.data = ""
+                    
                 if 'right_turn' in self.data:
                     print("DATA IS:",self.data)
                     self.data = ""
-                    p0 = Process(target=self.movement.rotate, args=(0, 0.01,))
-                    p0.start()
-#                   sleep(1)
-#                   p0.terminate()
+                    self.pRotate_right = Process(target=self.movement.rotate, args=(0, 0.01,))
+                    if not self.pRotate_right.is_alive():
+                        self.pRotate_right.start()
                      
                 if 'left_turn' in self.data:
                     print("DATA IS:",self.data)
                     self.data = ""
-                    p4 = Process(target=self.movement.rotate(1, 0.01))
-                    p4.start()
+                    self.pRotate_left = Process(target=self.movement.rotate, args=(1, 0.01,))
+                    if not self.pRotate_left.is_alive():
+                        self.pRotate_left.start()
                     
                 if 'backward' in self.data:
                     print("DATA IS:",self.data)
                     self.data = ""
-                    p8 = Process(target=self.movement.walk(0, 0.01))
-                    p8.start()
-                    p8.join()
+                    self.pBackwards = Process(target=self.movement.walk, args=(0, 0.01,))
+                    self.pBackwards.start()
                 
                 if 'forward' in self.data:
                     print("DATA IS:",self.data)
                     self.data = ""
-                    p9 = Process(target=self.movement.walk(1, 0.01))
-                    p9.start()
-                    p9.join()
+                    self.pForwards = Process(target=self.movement.walk, args=(1, 0.01,))
+                    self.pForwards.start()
                     
                 if 'search' in self.data:
                     print("DATA IS:",self.data)
@@ -1098,14 +1188,16 @@ class port:
                     p5 = Thread(target=port.search(0.05))
                     p5.start()
                     p5.join()
-            else:
-                sleep(1)
+            #else:
+            #    sleep(0.5)
                     
     def sonar(self):
         distance = round(self.dist.distance*100,2)
         port.send_data(distance)
+        print('Distance sent:', distance)
         
     def cam_rotation(self):
+        
         #self.data = ""
         while True:
             sleep(0.25)
@@ -1113,20 +1205,19 @@ class port:
                 if self.lr == 0:
                     print("Cam_rotation engaged!")
                     a = ang(12)
-                    if a > 87:
-                        a = 88
-                    if a < -88:
-                        a = -87
-                    servo[12].angle = a+1.5
+                    if a > 80:
+                        a = 80
+                    if a < -80:
+                        a = -80
+                    servo[12].angle = a+4.0
                     self.v_flag = False
                 if self.lr == 1:
                     a = ang(12)
-                    if a > 87:
-                        a = 88
-                    if a < -88:
-                        a = -87
-                    servo[12].angle = a-1.5
-                    sleep(0.01)
+                    if a > 80:
+                        a = 80
+                    if a < -80:
+                        a = -80
+                    servo[12].angle = a-4.0
                     self.v_flag = False
             
             
@@ -1135,24 +1226,41 @@ class port:
         flag_break = False
         self.stop = False
         print("Searching...")
-                
+        ang_12 = 10
+        if self.last_location is not None:
+            print('Last Location:', self.last_location)
+            ang_12 = self.last_location
+            self.last_location = None
         while True:
             if flag_break:
                 data = ""
                 print("Search Stopped")
                 break
-            a = 0
-            b = 0
-            for i in range(0,90):
-                servo[12].angle = a+i
-                #servo[13].angle = b+i
-                sleep(t)
-                if self.stop:
-                    flag_break = True  
-                    break
+            a = ang_12
+            #b = 0
+            if a >= 0:
+                for i in range(0, 179):
+                    servo[12].angle = a+i
+                    if servo[12].angle >= 89:
+                        break
+                    #servo[13].angle = b+i
+                    sleep(t)
+                    if self.stop:
+                        flag_break = True  
+                        break
+            if a <= -1:
+                for i in range(0,179):
+                    servo[12].angle = a-i
+                    if servo[12].angle <= -89:
+                        break
+                    #servo[13].angle = b+i
+                    sleep(t)
+                    if self.stop:
+                        flag_break = True  
+                        break
                            
             a = ang(12)
-            b = ang(13)
+            #b = ang(13)
             for i in range(0,179):
                 if self.stop:
                     flag_break = True    
@@ -1162,7 +1270,7 @@ class port:
                 sleep(t)
                     
             a = ang(12)
-            b = ang(13)
+            #b = ang(13)
             for i in range(0,90):
                 if self.stop:
                     flag_break = True     
@@ -1170,11 +1278,13 @@ class port:
                 servo[12].angle = a+i
                 #servo[13].angle = b+i
                 sleep(t)
+
         
     
 if __name__ == "__main__":
+    for th in threading.enumerate():
+        print(th.name)
     port = port()
-    
     thread1 = Thread(target=port.rec_data)
     thread1.start()
     camRotation = Thread(target=port.cam_rotation)
@@ -1189,3 +1299,4 @@ if __name__ == "__main__":
     
     
     
+
