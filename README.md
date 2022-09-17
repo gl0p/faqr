@@ -19,7 +19,7 @@ Uses coco.names, a list of 91 objects you can ask it to find.
             1 or 2 speakers (amplifier optional)
             RpLidar 
            
-            You might be able to get away with two Raspberry Pi's and an arduino.
+            You might be able to get away with three Raspberry Pi's and an arduino.
 
 ## Soon to come: 
 
