@@ -37,7 +37,7 @@ Uses coco.names, a list of 91 objects you can ask it to find.
               
 ## Notes:
 
-Setting up each USB serial device (arduino and both pi's) are better to symlink tty address with a unique name incase of swapping of ports occures when device is reset or powered off. Since raspberry pi's may have the same vendor and product id, using manufacture attribute may be benificial in place of product id. If using two identical products, other attributes may need to be used instead as an "unique identifier" for the device when symlinking. Follow https://unix.stackexchange.com/questions/66901/how-to-bind-usb-device-under-a-static-name 
+Setting up each USB serial device (arduino and both pi's) are better to symlink tty address with a unique name incase of swapping of ports occures when device is reset or powered off. Since raspberry pi's may have the same vendor and product id, using manufacture attribute may be benificial in place of product id. If using two identical products, other attributes may need to be used instead as an "unique identifier" for the device when symlinking. Follow https://unix.stackexchange.com/questions/66901/how-to-bind-usb-device-under-a-static-name for instructions.
 
 
             
