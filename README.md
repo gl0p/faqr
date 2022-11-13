@@ -1,4 +1,4 @@
-# FAQR
+# FAQR V2.0 (Comming soon with ros2)
 ## Fully Autonomous Quadruped Robot 
 
 Ask it to find something and it will walk right up to it. Ask it to follow you, and it will stalk you. Tell it to stop and it will wait right there. Just dont ask it for cake.
