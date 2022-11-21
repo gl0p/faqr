@@ -1,0 +1,14 @@
+{
+ "tag_names": [
+  {
+   "greeting": "greeting",
+   "goodbye": "goodbye",
+   "search": "search",
+   "personal": "personal",
+   "clear": "clear",
+   "found_you": "found_you",
+   "around_here": "around_here",
+   "give_up": "give_up"
+  }
+ ]
+}
